@@ -80,6 +80,8 @@ export default function App() {
   const [currentRound, setCurrentRound] = useState(0);
   const [timeLeft, setTimeLeft] = useState(10);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [showContinue, setShowContinue] = useState(false);
+  const [continueTimer, setContinueTimer] = useState(9);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   // Sound effects
@@ -158,12 +160,39 @@ export default function App() {
       timer = setInterval(() => {
         setTimeLeft(prev => prev - 1);
       }, 1000);
-    } else if (timeLeft === 0 && state.selectedMode === 'TIME_TRIAL') {
+    } else if (timeLeft === 0 && state.selectedMode === 'TIME_TRIAL' && !isGameOver) {
       soundService.playFail();
+      setShowContinue(true);
+      setContinueTimer(9);
       setIsGameOver(true);
     }
     return () => clearInterval(timer);
   }, [state.screen, state.selectedMode, isGameOver, timeLeft]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showContinue && continueTimer > 0) {
+      timer = setInterval(() => {
+        setContinueTimer(prev => prev - 1);
+      }, 1000);
+    } else if (showContinue && continueTimer === 0) {
+      setShowContinue(false);
+      // Final game over
+    }
+    return () => clearInterval(timer);
+  }, [showContinue, continueTimer]);
+
+  const handleContinue = (success: boolean) => {
+    if (success) {
+      setIsGameOver(false);
+      setShowContinue(false);
+      setTimeLeft(10);
+      playSound('success');
+    } else {
+      setShowContinue(false);
+      playSound('click');
+    }
+  };
 
   const handleAnswer = (answer: string) => {
     if (isGameOver) return;
@@ -234,10 +263,76 @@ export default function App() {
         </div>
       </div>
 
-      <PixelButton onClick={handleStart} className="px-12 py-4 text-lg">
-        INITIALIZE SYSTEM
-      </PixelButton>
+      <div className="flex flex-col gap-4">
+        <PixelButton onClick={handleStart} className="px-12 py-4 text-lg">
+          INITIALIZE SYSTEM
+        </PixelButton>
+        <button 
+          onClick={() => setState(prev => ({ ...prev, screen: 'HOW_TO_PLAY' }))}
+          className="text-y3k-cyan font-pixel text-[10px] hover:underline"
+        >
+          HOW TO PLAY
+        </button>
+      </div>
     </motion.div>
+  );
+
+  const renderHowToPlay = () => (
+    <div className="flex flex-col h-screen p-8 overflow-y-auto">
+      <header className="flex justify-between items-center mb-12 shrink-0">
+        <h2 className="text-2xl font-pixel text-y3k-cyan">SYSTEM DOCUMENTATION</h2>
+        <PixelButton onClick={() => setState(prev => ({ ...prev, screen: 'INTRO' }))} className="bg-gray-800">
+          CLOSE
+        </PixelButton>
+      </header>
+      
+      <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 shrink-0">
+        <div className="pixel-card border-y3k-cyan">
+          <h3 className="font-pixel text-y3k-cyan mb-4 flex items-center gap-2"><Timer size={16}/> TIME TRIAL</h3>
+          <p className="text-xs leading-relaxed text-y3k-silver mb-4">
+            Rapid-fire C++ questions. You have 10 seconds per question. 
+            Accuracy and speed are key to surviving the clock.
+          </p>
+          <div className="text-[10px] font-pixel text-y3k-cyan/60 uppercase">Objective: Solve 10 questions before time runs out.</div>
+        </div>
+
+        <div className="pixel-card border-y3k-pink">
+          <h3 className="font-pixel text-y3k-pink mb-4 flex items-center gap-2"><User size={16}/> TAP MODE</h3>
+          <p className="text-xs leading-relaxed text-y3k-silver mb-4">
+            A memory core challenge. A category is given, and you must tap a letter 
+            to reset the 10s timer. Don't repeat letters!
+          </p>
+          <div className="text-[10px] font-pixel text-y3k-pink/60 uppercase">Objective: Keep the timer alive for 5 rounds.</div>
+        </div>
+
+        <div className="pixel-card border-y3k-purple">
+          <h3 className="font-pixel text-y3k-purple mb-4 flex items-center gap-2"><Bug size={16}/> GLITCH MODE</h3>
+          <p className="text-xs leading-relaxed text-y3k-silver mb-4">
+            The system is corrupted. Analyze broken code snippets, identify the bug, 
+            and apply the correct fix to restore integrity.
+          </p>
+          <div className="text-[10px] font-pixel text-y3k-purple/60 uppercase">Objective: Repair 10 corrupted code modules.</div>
+        </div>
+
+        <div className="pixel-card border-y3k-silver">
+          <h3 className="font-pixel text-y3k-silver mb-4 flex items-center gap-2"><Award size={16}/> ALGORITHM QUEST</h3>
+          <p className="text-xs leading-relaxed text-y3k-silver mb-4">
+            Scenario-based problem solving. Apply C++ logic to real-world challenges 
+            aligned with Sustainable Development Goals.
+          </p>
+          <div className="text-[10px] font-pixel text-y3k-silver/60 uppercase">Objective: Complete 10 scenario-based missions.</div>
+        </div>
+      </div>
+      
+      <div className="mt-12 p-6 bg-y3k-cyan/5 border-2 border-dashed border-y3k-cyan/30 rounded-lg text-center shrink-0">
+        <h4 className="font-pixel text-y3k-cyan text-sm mb-4">SUPER POWERS</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[10px] font-pixel">
+          <div className="text-y3k-cyan">SINE: +5 SECONDS</div>
+          <div className="text-y3k-pink">COSINE: ERASE WRONG ANSWER</div>
+          <div className="text-y3k-purple">TANGENT: 2X SCORE MULTIPLIER</div>
+        </div>
+      </div>
+    </div>
   );
 
   const renderCharSelect = () => (
@@ -366,6 +461,20 @@ export default function App() {
     const questSet = state.difficulty === 'EASY' ? BASIC_QUEST_ROUNDS : ADVANCED_QUEST_ROUNDS;
     const tappleSet = state.difficulty === 'EASY' ? BASIC_TAPPLE_ROUNDS : ADVANCED_TAPPLE_ROUNDS;
 
+    if (showContinue && state.selectedMode === 'TIME_TRIAL') {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen bg-black p-8 text-center">
+          <h2 className="text-6xl font-pixel text-red-500 glitch-text mb-12">CONTINUE?</h2>
+          <div className="text-9xl font-pixel text-white mb-12 animate-pulse">{continueTimer}</div>
+          <div className="flex gap-8">
+            <PixelButton onClick={() => handleContinue(true)} className="px-12 py-6 text-xl bg-green-600">YES</PixelButton>
+            <PixelButton onClick={() => handleContinue(false)} className="px-12 py-6 text-xl bg-red-600">NO</PixelButton>
+          </div>
+          <p className="mt-12 text-y3k-silver font-pixel text-xs">TIME EXPIRED ON ROUND {currentRound + 1}</p>
+        </div>
+      );
+    }
+
     switch(state.selectedMode) {
       case 'TIME_TRIAL': return <TimeTrialView 
         round={currentRound} 
@@ -488,6 +597,7 @@ export default function App() {
         {state.screen === 'INTRO' && renderIntro()}
         {state.screen === 'CHAR_SELECT' && renderCharSelect()}
         {state.screen === 'DIFFICULTY_SELECT' && renderDifficultySelect()}
+        {state.screen === 'HOW_TO_PLAY' && renderHowToPlay()}
         {state.screen === 'MENU' && renderMenu()}
         {state.screen === 'PLAYING' && renderPlaying()}
         {state.screen === 'BOSS' && renderBoss()}

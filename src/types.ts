@@ -51,7 +51,7 @@ export type QuestRound = {
 export type Difficulty = 'EASY' | 'HARD';
 
 export type GameState = {
-  screen: 'INTRO' | 'CHAR_SELECT' | 'DIFFICULTY_SELECT' | 'MENU' | 'PLAYING' | 'BOSS' | 'RESULTS';
+  screen: 'INTRO' | 'CHAR_SELECT' | 'DIFFICULTY_SELECT' | 'MENU' | 'PLAYING' | 'BOSS' | 'RESULTS' | 'HOW_TO_PLAY';
   selectedMode: GameMode | null;
   character: Character | null;
   difficulty: Difficulty;
